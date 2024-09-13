@@ -35,6 +35,7 @@ if [ -n "$CYGWIN_PREFIX" ] ; then
     export AUTOMAKE=automake-$am_version
     autoreconf_args=(
         --force
+        --verbose
         --install
         -I "$mprefix/share/aclocal"
         -I "$BUILD_PREFIX_M/Library/mingw-w64/share/aclocal"
@@ -45,9 +46,19 @@ if [ -n "$CYGWIN_PREFIX" ] ; then
     # msys2 stub libraries for ws2_32.
     platlibs=$(cd $(dirname $(gcc --print-prog-name=ld))/../lib && pwd -W)
     export LDFLAGS="$LDFLAGS -L$platlibs"
+else
+    autoreconf_args=(
+        --force
+        --verbose
+        --install
+        -I "${PREFIX}/share/aclocal"
+        -I "${BUILD_PREFIX}/share/aclocal"
+    )
+    autoreconf "${autoreconf_args[@]}"
 fi
 
 export PKG_CONFIG_LIBDIR=$uprefix/lib/pkgconfig:$uprefix/share/pkgconfig
+export CONFIG_FLAGS="--build=${BUILD}"
 configure_args=(
     --prefix=$mprefix
     --disable-static
