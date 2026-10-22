@@ -1,3 +1,5 @@
+if /I "%target_platform%"=="win-arm64" goto win_arm64
+
 :: Delegate to the Unixy script. We need to translate the key path variables
 :: to be Unix-y rather than Windows-y, though.
 set "saved_recipe_dir=%RECIPE_DIR%"
@@ -13,3 +15,9 @@ FOR /F "delims=" %%i IN ('cygpath.exe -u "%SRC_DIR%"') DO set "SRC_DIR=%%i"
 FOR /F "delims=" %%i IN ('cygpath.exe -u "%STDLIB_DIR%"') DO set "STDLIB_DIR=%%i"
 bash -x %saved_recipe_dir%\build.sh
 if errorlevel 1 exit 1
+exit /b 0
+
+:win_arm64
+set "PKG_NAME=xshmfence"
+call "%BUILD_PREFIX%\Library\bin\run_autotools_clang_conda_build.bat"
+if errorlevel 1 exit /b 1

@@ -28,7 +28,9 @@ configure_args=(
 )
 
 # On Windows we need to regenerate the configure scripts.
-if [ -n "$CYGWIN_PREFIX" ] ; then
+if [[ "${target_platform:-}" == "win-arm64" ]]; then
+    autoreconf -vfi -I "$PREFIX/share/aclocal" -I "$BUILD_PREFIX/Library/usr/share/aclocal"
+elif [ -n "$CYGWIN_PREFIX" ] ; then
     am_version=1.16 # keep sync'ed with meta.yaml
     export ACLOCAL=aclocal-$am_version
     export AUTOMAKE=automake-$am_version
@@ -69,6 +71,9 @@ if [[ "${CONDA_BUILD_CROSS_COMPILATION}" == "1" ]] ; then
 fi
 
 ./configure "${configure_args[@]}"
+if [[ "${target_platform:-}" == "win-arm64" ]]; then
+    patch_libtool
+fi
 make -j$CPU_COUNT
 make install
 
