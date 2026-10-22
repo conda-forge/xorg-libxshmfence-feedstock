@@ -1,0 +1,107 @@
+Build a stub library for Windows on ARM64 (MSVC target)
+
+Windows has neither process-shared synchronization in a mapped file nor
+mmap, so libxshmfence cannot work there; the x86-64 Windows build is a
+stub too (windows.patch). For host systems matching mingw* or windows*,
+build only src/xshmfence_win32.c: allocation fails and nothing can be
+mapped, while the exported API stays the same.
+
+diff -ruN a/configure.ac b/configure.ac
+--- a/configure.ac
++++ b/configure.ac
+@@ -90,6 +90,14 @@
+ AC_SUBST([PTHREAD_LIBS])
+ 
+ AM_CONDITIONAL([FUTEX], [test x"$FUTEX" = xyes])
++
++dnl Windows has neither process-shared synchronization in a mapped file nor
++dnl mmap: build a stub whose allocation fails, so no fence can be mapped.
++case $host_os in
++mingw* | windows*) WIN32_STUB=yes ;;
++*) WIN32_STUB=no ;;
++esac
++AM_CONDITIONAL([WIN32_STUB], [test x"$WIN32_STUB" = xyes])
+ AM_CONDITIONAL([PTHREAD], [test x"$PTHREAD" = xyes])
+ 
+ PKG_CHECK_MODULES(XPROTO, xproto)
+diff -ruN a/src/Makefile.am b/src/Makefile.am
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -8,11 +8,15 @@
+ FUTEX_SOURCES=xshmfence_futex.c xshmfence_futex.h
+ endif
+ 
++if WIN32_STUB
++libxshmfence_la_SOURCES = xshmfence_win32.c
++else
+ libxshmfence_la_SOURCES = \
+ 	xshmfenceint.h \
+ 	xshmfence_alloc.c \
+ 	$(PTHREAD_SOURCES) \
+ 	$(FUTEX_SOURCES)
++endif
+ 
+ AM_CFLAGS = $(CWARNFLAGS)
+ 
+diff -ruN a/src/xshmfence_win32.c b/src/xshmfence_win32.c
+--- a/src/xshmfence_win32.c
++++ b/src/xshmfence_win32.c
+@@ -0,0 +1,58 @@
++/*
++ * Windows stub: there is no shared memory a fence can live in, so
++ * allocation fails and nothing can be mapped. The fence operations are
++ * only reachable through a mapped fence; they report failure.
++ */
++
++#if HAVE_CONFIG_H
++#include "config.h"
++#endif
++
++#include <stddef.h>
++#include "xshmfence.h"
++
++int
++xshmfence_trigger(struct xshmfence *f)
++{
++	(void) f;
++	return -1;
++}
++
++int
++xshmfence_await(struct xshmfence *f)
++{
++	(void) f;
++	return -1;
++}
++
++int
++xshmfence_query(struct xshmfence *f)
++{
++	(void) f;
++	return 0;
++}
++
++void
++xshmfence_reset(struct xshmfence *f)
++{
++	(void) f;
++}
++
++int
++xshmfence_alloc_shm(void)
++{
++	return -1;
++}
++
++struct xshmfence *
++xshmfence_map_shm(int fd)
++{
++	(void) fd;
++	return NULL;
++}
++
++void
++xshmfence_unmap_shm(struct xshmfence *f)
++{
++	(void) f;
++}
